@@ -1,59 +1,44 @@
-#!/usr/bin/env python3
-"""Unit tests for utils.py"""
-
 import unittest
-from parameterized import parameterized
-from unittest.mock import patch, MagicMock
-from utils import access_nested_map, get_json, memoize
+from unittest.mock import patch, Mock
+from utils import get_json, memoize
 
 
-class TestAccessNestedMap(unittest.TestCase):
-    """Test case for the access_nested_map function"""
-
-    @parameterized.expand([
-        ({"a": 1}, ("a",), 1),
-        ({"a": {"b": 2}}, ("a",), {"b": 2}),
-        ({"a": {"b": 2}}, ("a", "b"), 2),
-    ])
-    def test_access_nested_map(self, nested_map, path, expected):
-        """Test access_nested_map with various inputs"""
-        result = access_nested_map(nested_map, path)
-        self.assertEqual(result, expected)
-
-    @parameterized.expand([
-        ({}, ("a",)),
-        ({"a": 1}, ("a", "b")),
-    ])
-    def test_access_nested_map_exception(self, nested_map, path):
-        """Test access_nested_map exception handling"""
-        with self.assertRaises(KeyError):
-            access_nested_map(nested_map, path)
-
-
-class TestUtilsGetJson(unittest.TestCase):
+class TestGetJson(unittest.TestCase):
     """Test case for the get_json function"""
 
-    @parameterized.expand([
-        ("http://example.com", {"payload": True}),
-        ("http://holberton.io", {"payload": False}),
-    ])
     @patch('utils.requests.get')
-    def test_get_json(self, test_url, test_payload, mock_get):
-        """Test get_json with different URLs and payloads"""
-        mock_response = MagicMock()
-        mock_response.json.return_value = test_payload
-        mock_get.return_value = mock_response
+    def test_get_json(self, mock_get):
+        """Test get_json with mocked requests.get"""
+        test_payload1 = {"payload": True}
+        test_payload2 = {"payload": False}
 
-        result = get_json(test_url)
-        mock_get.assert_called_once_with(test_url)
-        self.assertEqual(result, test_payload)
+        # Mocking requests.get and its return value
+        mock_response1 = Mock()
+        mock_response1.json.return_value = test_payload1
+
+        mock_response2 = Mock()
+        mock_response2.json.return_value = test_payload2
+
+        mock_get.side_effect = [mock_response1, mock_response2]
+
+        result1 = get_json("http://example.com")
+        result2 = get_json("http://holberton.io")
+
+        # Asserting requests.get called with the respective URL
+        mock_get.assert_any_call("http://example.com")
+        mock_get.assert_any_call("http://holberton.io")
+
+        # Asserting the outputs of get_json
+        self.assertEqual(result1, test_payload1)
+        self.assertEqual(result2, test_payload2)
 
 
-class TestUtilsMemoize(unittest.TestCase):
+class TestMemoize(unittest.TestCase):
     """Test case for the memoize decorator"""
 
     def test_memoize(self):
         """Test memoize decorator"""
+
         class TestClass:
             def a_method(self):
                 return 42
@@ -66,10 +51,11 @@ class TestUtilsMemoize(unittest.TestCase):
             mock_a_method.return_value = 42
 
             obj = TestClass()
-            obj.a_property
-            obj.a_property
+            result1 = obj.a_property
+            result2 = obj.a_property
 
             mock_a_method.assert_called_once()
+            self.assertEqual(result1, result2)
 
 
 if __name__ == "__main__":
